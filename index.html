@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="description" content="Victor's Daily Goal Tracker — stay organised, stay winning." />
+<title>Goal HQ — Victor's Daily Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --gold: #FFB800;
+    --gold-dim: rgba(255,184,0,0.12);
+    --gold-border: rgba(255,184,0,0.25);
+    --bg: #0a0a0a;
+    --bg2: #111118;
+    --bg3: #17171f;
+    --border: rgba(255,255,255,0.07);
+    --text: #e0ddd5;
+    --muted: #5a5a6a;
+    --cyan: #00D4FF;
+    --green: #00FF9D;
+    --red: #FF6B6B;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Mono', monospace;
+    --radius: 12px;
+    --tab-h: 58px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--font-body); font-size: 14px;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  /* ── LAYOUT ── */
+  #app { display: flex; flex-direction: column; min-height: 100vh; max-width: 480px; margin: 0 auto; position: relative; }
+
+  /* ── HEADER ── */
+  #header {
+    padding: 24px 20px 18px;
+    background: linear-gradient(170deg, #14141e 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 20;
+  }
+  .h-left { display: flex; flex-direction: column; gap: 2px; }
+  .h-eyebrow { font-size: 9px; letter-spacing: 3px; color: var(--muted); font-family: var(--font-body); }
+  .h-title { font-family: var(--font-head); font-size: 38px; line-height: 1; color: #fff; }
+  .h-title span { color: var(--gold); }
+  .h-date { font-size: 10px; color: var(--muted); letter-spacing: 0.5px; margin-top: 4px; }
+
+  /* Progress Ring */
+  .ring-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 7; }
+  .ring-fill { fill: none; stroke: var(--gold); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset .7s cubic-bezier(.4,0,.2,1), stroke .4s; }
+  .ring-fill.full { stroke: var(--green); }
+  .ring-label {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 0;
+  }
+  .ring-pct { font-family: var(--font-head); font-size: 22px; color: var(--gold); line-height: 1; transition: color .4s; }
+  .ring-pct.full { color: var(--green); }
+  .ring-sub { font-size: 8px; color: var(--muted); letter-spacing: 1.5px; }
+
+  /* ── TABS ── */
+  #tabs {
+    display: flex; background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 105px; z-index: 19;
+  }
+  .tab-btn {
+    flex: 1; height: var(--tab-h); background: none; border: none;
+    border-bottom: 2px solid transparent; color: var(--muted);
+    font-family: var(--font-body); font-size: 11px; letter-spacing: 0.5px;
+    cursor: pointer; transition: color .2s, border-color .2s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  }
+  .tab-btn .tab-icon { font-size: 18px; line-height: 1; }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── CONTENT ── */
+  #content { flex: 1; overflow-y: auto; padding: 16px 14px 90px; -webkit-overflow-scrolling: touch; }
+
+  /* ── CATEGORY CARDS ── */
+  .cat-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 12px;
+    overflow: hidden; transition: border-color .2s;
+  }
+  .cat-card:focus-within { border-color: var(--gold-border); }
+  .cat-header {
+    padding: 12px 14px 10px; display: flex;
+    align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .cat-left { display: flex; align-items: center; gap: 9px; }
+  .cat-emoji { font-size: 20px; line-height: 1; }
+  .cat-name { font-size: 11px; font-weight: 500; letter-spacing: 1.5px; }
+  .cat-badge {
+    font-size: 10px; font-weight: 500; padding: 3px 9px;
+    border-radius: 20px; letter-spacing: 0.5px;
+  }
+
+  /* Goal rows */
+  .goal-list { padding: 0 14px; }
+  .goal-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    animation: slideIn .2s ease;
+  }
+  .goal-row:last-child { border-bottom: none; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .goal-check {
+    width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid;
+    flex-shrink: 0; cursor: pointer; background: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; transition: background .2s, transform .15s;
+    -webkit-appearance: none;
+  }
+  .goal-check:active { transform: scale(0.88); }
+  .goal-text { flex: 1; font-size: 13px; color: var(--text); line-height: 1.45; word-break: break-word; }
+  .goal-text.done { color: var(--muted); text-decoration: line-through; }
+  .goal-del {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 13px; padding: 4px 6px; flex-shrink: 0; border-radius: 4px;
+    transition: color .2s, background .2s;
+  }
+  .goal-del:hover { color: var(--red); background: rgba(255,107,107,.1); }
+
+  /* Add input row */
+  .add-row {
+    display: flex; gap: 8px; padding: 10px 14px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .add-input {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; color: var(--text);
+    font-family: var(--font-body); font-size: 12px; outline: none;
+    transition: border-color .2s;
+  }
+  .add-input:focus { border-color: var(--gold-border); }
+  .add-input::placeholder { color: var(--muted); }
+  .add-btn {
+    width: 38px; height: 38px; border-radius: 9px; border: none;
+    background: var(--gold); color: #000; font-size: 22px; font-weight: 700;
+    cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    line-height: 1; transition: opacity .2s, transform .15s;
+  }
+  .add-btn:active { transform: scale(0.9); opacity: .85; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; color: var(--muted); font-size: 12px;
+    padding: 28px 20px; letter-spacing: 0.3px; line-height: 1.7;
+  }
+  .empty-state span { font-size: 28px; display: block; margin-bottom: 10px; }
+
+  /* ── STREAK BANNER ── */
+  .streak-bar {
+    background: linear-gradient(90deg, var(--gold-dim), transparent);
+    border: 1px solid var(--gold-border); border-radius: var(--radius);
+    padding: 11px 14px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .streak-fire { font-size: 22px; }
+  .streak-text { font-size: 12px; color: var(--gold); }
+  .streak-count { font-family: var(--font-head); font-size: 28px; color: var(--gold); margin-left: auto; line-height: 1; }
+
+  /* ── PLANNER TAB ── */
+  .print-note {
+    background: var(--gold-dim); border: 1px solid var(--gold-border);
+    border-radius: 8px; padding: 10px 13px; font-size: 11px;
+    color: var(--gold); margin-bottom: 14px; line-height: 1.6;
+  }
+  .planner-card {
+    background: #fff; color: #111; border-radius: var(--radius);
+    padding: 24px 20px; font-family: Georgia, serif;
+  }
+  .planner-title { font-size: 20px; font-weight: 900; letter-spacing: 2px; text-align: center; }
+  .planner-date { font-size: 11px; color: #777; text-align: center; margin-top: 3px; margin-bottom: 14px; }
+  .planner-divider { border: none; border-top: 2px solid #111; margin: 10px 0 16px; }
+  .planner-prog-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #444; margin-bottom: 5px; }
+  .planner-bar-bg { height: 7px; background: #eee; border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
+  .planner-bar-fill { height: 100%; background: #222; border-radius: 4px; transition: width .5s; }
+  .planner-prog-txt { font-size: 11px; color: #666; margin-bottom: 16px; }
+  .planner-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #ddd; }
+  .planner-section:last-of-type { border-bottom: none; }
+  .planner-cat { font-weight: 700; font-size: 13px; margin-bottom: 10px; }
+  .planner-goal-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .planner-box {
+    width: 16px; height: 16px; border: 1.5px solid #333; border-radius: 3px;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; background: #fff;
+  }
+  .planner-box.checked { background: #111; color: #fff; }
+  .planner-goal-txt { font-size: 12px; }
+  .planner-goal-txt.done { text-decoration: line-through; color: #999; }
+  .planner-blank { flex: 1; border-bottom: 1px dashed #ccc; min-height: 18px; }
+  .planner-tip { background: #f5f5f5; border-radius: 6px; padding: 10px 12px; margin-top: 8px; font-size: 11px; color: #555; line-height: 1.6; }
+
+  /* ── TIPS TAB ── */
+  .tips-heading { font-family: var(--font-head); font-size: 32px; color: #fff; margin-bottom: 2px; }
+  .tips-sub { font-size: 11px; color: var(--muted); margin-bottom: 18px; letter-spacing: 0.3px; }
+  .tip-card {
+    display: flex; gap: 13px; align-items: flex-start;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 10px;
+    animation: slideIn .3s ease;
+  }
+  .tip-num { font-size: 9px; color: #333; letter-spacing: 1px; flex-shrink: 0; margin-top: 3px; width: 16px; }
+  .tip-emoji { font-size: 22px; flex-shrink: 0; }
+  .tip-title { font-size: 12px; font-weight: 500; color: var(--gold); margin-bottom: 4px; letter-spacing: 0.3px; }
+  .tip-body { font-size: 11px; color: var(--muted); line-height: 1.65; }
+
+  .system-box {
+    background: linear-gradient(135deg, var(--bg2), var(--bg3));
+    border: 1px solid var(--gold-border); border-radius: var(--radius);
+    padding: 16px; margin-top: 4px;
+  }
+  .system-title { font-size: 12px; color: var(--gold); font-weight: 500; margin-bottom: 14px; letter-spacing: 0.5px; }
+  .system-step { display: flex; gap: 11px; align-items: flex-start; margin-bottom: 11px; font-size: 11px; color: #aaa; line-height: 1.55; }
+  .step-num {
+    background: var(--gold); color: #000; border-radius: 50%;
+    width: 19px; height: 19px; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+
+  /* ── CELEBRATE FLASH ── */
+  @keyframes celebrate {
+    0%   { background: rgba(255,184,0,0.18); }
+    100% { background: transparent; }
+  }
+  .celebrating { animation: celebrate .7s ease forwards; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--gold); color: #000; font-family: var(--font-body);
+    font-size: 12px; font-weight: 500; padding: 9px 18px; border-radius: 30px;
+    opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; z-index: 99;
+    white-space: nowrap; letter-spacing: 0.3px;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── OFFLINE BADGE ── */
+  #offline-badge {
+    position: fixed; top: 12px; right: 14px;
+    background: #2a1a00; border: 1px solid #5a3a00;
+    color: #FFB800; font-size: 9px; letter-spacing: 1.5px;
+    padding: 3px 8px; border-radius: 20px; z-index: 50;
+    display: none;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    #app > *:not(#content) { display: none !important; }
+    #content { padding: 0 !important; }
+    .tab-pane { display: block !important; }
+    #tab-tracker, #tab-tips { display: none !important; }
+    .planner-card { box-shadow: none; }
+  }
+
+  /* Scrollbar */
+  #content::-webkit-scrollbar { width: 4px; }
+  #content::-webkit-scrollbar-track { background: transparent; }
+  #content::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div class="h-left">
+      <div class="h-eyebrow">DAILY PLANNER</div>
+      <div class="h-title">GOAL <span>HQ</span></div>
+      <div class="h-date" id="h-date"></div>
+    </div>
+    <div class="ring-wrap">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle class="ring-track" cx="40" cy="40" r="33" />
+        <circle class="ring-fill" id="ring-fill" cx="40" cy="40" r="33"
+          stroke-dasharray="207.34"
+          stroke-dashoffset="207.34" />
+      </svg>
+      <div class="ring-label">
+        <div class="ring-pct" id="ring-pct">0%</div>
+        <div class="ring-sub">DONE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div id="tabs">
+    <button class="tab-btn active" onclick="switchTab('tracker')" id="tab-btn-tracker">
+      <span class="tab-icon">🎯</span>Tracker
+    </button>
+    <button class="tab-btn" onclick="switchTab('planner')" id="tab-btn-planner">
+      <span class="tab-icon">📋</span>Planner
+    </button>
+    <button class="tab-btn" onclick="switchTab('tips')" id="tab-btn-tips">
+      <span class="tab-icon">💡</span>Tips
+    </button>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+
+    <!-- ── TRACKER TAB ── -->
+    <div id="tab-tracker" class="tab-pane">
+      <div id="streak-area"></div>
+      <div id="empty-state" class="empty-state" style="display:none">
+        <span>🚀</span>
+        No goals yet today.<br />Add your first goal below — let's get it!
+      </div>
+      <!-- Cards injected here -->
+      <div id="cards-container"></div>
+    </div>
+
+    <!-- ── PLANNER TAB ── -->
+    <div id="tab-planner" class="tab-pane" style="display:none">
+      <div class="print-note">
+        📋 Printable planner view. Tap your browser's <b>Share → Print</b> (mobile) or <b>Ctrl+P</b> (desktop) to print.
+      </div>
+      <div class="planner-card" id="planner-content"></div>
+    </div>
+
+    <!-- ── TIPS TAB ── -->
+    <div id="tab-tips" class="tab-pane" style="display:none">
+      <div class="tips-heading">TIPS & SYSTEM</div>
+      <div class="tips-sub">6 rules that will sharpen your day.</div>
+      <div id="tips-list"></div>
+      <div class="system-box">
+        <div class="system-title">⚙️ VICTOR'S DAILY SYSTEM</div>
+        <div class="system-step"><span class="step-num">1</span><span><b>Morning (5 min)</b> — Open Goal HQ, set 2–3 goals per category.</span></div>
+        <div class="system-step"><span class="step-num">2</span><span><b>Midday check-in</b> — Mark what's done, adjust unfinished ones.</span></div>
+        <div class="system-step"><span class="step-num">3</span><span><b>Night review (5 min)</b> — Check your progress ring. Celebrate any win.</span></div>
+        <div class="system-step"><span class="step-num">4</span><span><b>Repeat every day.</b> Consistency beats perfection. Even 50% done daily = growth.</span></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+<div id="offline-badge">✈ OFFLINE</div>
+
+<script>
+// ────────────────────────────────────────────
+//  CONFIG
+// ────────────────────────────────────────────
+const CATS = [
+  { id:"study",   label:"Study / School",     emoji:"📚", color:"#00D4FF", border:"rgba(0,212,255,0.2)",  badge:"rgba(0,212,255,0.12)" },
+  { id:"health",  label:"Health & Fitness",   emoji:"💪", color:"#00FF9D", border:"rgba(0,255,157,0.2)",  badge:"rgba(0,255,157,0.12)" },
+  { id:"project", label:"Personal Projects",  emoji:"⚡", color:"#FFB800", border:"rgba(255,184,0,0.2)",  badge:"rgba(255,184,0,0.12)" },
+  { id:"general", label:"General Tasks",      emoji:"✅", color:"#FF6B6B", border:"rgba(255,107,107,0.2)", badge:"rgba(255,107,107,0.12)" },
+];
+
+const TIPS = [
+  { emoji:"🎯", title:"The 3-Goal Rule",      body:"Limit yourself to 3 priority goals per category per day. More than that splits your focus — nothing gets done properly." },
+  { emoji:"⏰", title:"Time-Block Everything", body:"Don't just write 'study'. Write 'study MTS 101 — 8:00–10:00AM'. Specificity makes goals feel real." },
+  { emoji:"🐸", title:"Eat The Frog First",   body:"Start your day with the hardest or most dreaded goal. Everything else feels easy after that." },
+  { emoji:"🔁", title:"Review Every Night",   body:"Before bed, check what you finished. Move unfinished items to tomorrow — never just delete them." },
+  { emoji:"🔋", title:"Energy Matching",      body:"Do deep work (studying, coding) when your energy is highest. Save errands and chores for low-energy slots." },
+  { emoji:"📐", title:"Be Brutally Specific", body:"'Exercise' is not a goal. '30 push-ups + 20-min run before 7AM' is. The more specific, the more likely you'll do it." },
+];
+
+// ────────────────────────────────────────────
+//  STATE
+// ────────────────────────────────────────────
+const STORAGE_KEY = "goalhq_data_v3";
+let state = { goals:{}, streak:0, lastDate:"" };
+
+function todayKey() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch(_) {}
+  // Auto-update streak
+  const today = todayKey();
+  if (state.lastDate !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    const yGoals = state.goals[yesterday] || {};
+    const hadAny = CATS.some(c => (yGoals[c.id]||[]).length > 0);
+    const allDone = hadAny && CATS.every(c => {
+      const gs = yGoals[c.id] || [];
+      return gs.length === 0 || gs.every(g => g.done);
+    });
+    state.streak = allDone ? (state.streak||0)+1 : 0;
+    state.lastDate = today;
+    save();
+  }
+}
+
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(_) {}
+}
+
+function todayGoals() {
+  const k = todayKey();
+  if (!state.goals[k]) state.goals[k] = {};
+  return state.goals[k];
+}
+
+function getCatGoals(catId) {
+  return todayGoals()[catId] || [];
+}
+
+// ────────────────────────────────────────────
+//  RING & PROGRESS
+// ────────────────────────────────────────────
+function updateProgress() {
+  let total = 0, done = 0;
+  CATS.forEach(c => {
+    const gs = getCatGoals(c.id);
+    total += gs.length;
+    done  += gs.filter(g=>g.done).length;
+  });
+  const pct = total === 0 ? 0 : Math.round(done/total*100);
+  const circ = 2 * Math.PI * 33;
+  const offset = circ * (1 - pct/100);
+
+  const fill = document.getElementById("ring-fill");
+  const pctEl = document.getElementById("ring-pct");
+  fill.style.strokeDashoffset = offset;
+  fill.className = "ring-fill" + (pct===100?" full":"");
+  pctEl.textContent = pct + "%";
+  pctEl.className = "ring-pct" + (pct===100?" full":"");
+}
+
+// ────────────────────────────────────────────
+//  RENDER TRACKER
+// ────────────────────────────────────────────
+function renderTracker() {
+  // Streak
+  const streakArea = document.getElementById("streak-area");
+  if (state.streak > 0) {
+    streakArea.innerHTML = `
+      <div class="streak-bar">
+        <div class="streak-fire">🔥</div>
+        <div class="streak-text">Current streak</div>
+        <div class="streak-count">${state.streak}d</div>
+      </div>`;
+  } else { streakArea.innerHTML = ""; }
+
+  const container = document.getElementById("cards-container");
+  container.innerHTML = "";
+
+  let totalGoals = 0;
+  CATS.forEach(cat => totalGoals += getCatGoals(cat.id).length);
+  document.getElementById("empty-state").style.display = totalGoals === 0 ? "block" : "none";
+
+  CATS.forEach(cat => {
+    const gs = getCatGoals(cat.id);
+    const doneCount = gs.filter(g=>g.done).length;
+
+    const card = document.createElement("div");
+    card.className = "cat-card";
+    card.style.borderColor = cat.border;
+    card.id = `card-${cat.id}`;
+
+    // Header
+    const header = document.createElement("div");
+    header.className = "cat-header";
+    header.innerHTML = `
+      <div class="cat-left">
+        <span class="cat-emoji">${cat.emoji}</span>
+        <span class="cat-name" style="color:${cat.color}">${cat.label.toUpperCase()}</span>
+      </div>
+      <span class="cat-badge" style="background:${cat.badge};color:${cat.color}">${doneCount}/${gs.length}</span>
+    `;
+    card.appendChild(header);
+
+    // Goal list
+    const list = document.createElement("div");
+    list.className = "goal-list";
+    list.id = `list-${cat.id}`;
+
+    gs.forEach(g => {
+      list.appendChild(makeGoalRow(g, cat));
+    });
+    card.appendChild(list);
+
+    // Add row
+    const addRow = document.createElement("div");
+    addRow.className = "add-row";
+    addRow.innerHTML = `
+      <input class="add-input" id="inp-${cat.id}" placeholder="Add a ${cat.label.toLowerCase()} goal…"
+        onkeydown="if(event.key==='Enter')addGoal('${cat.id}')" />
+      <button class="add-btn" style="background:${cat.color}" onclick="addGoal('${cat.id}')">+</button>
+    `;
+    card.appendChild(addRow);
+    container.appendChild(card);
+  });
+
+  updateProgress();
+}
+
+function makeGoalRow(g, cat) {
+  const row = document.createElement("div");
+  row.className = "goal-row";
+  row.id = `row-${g.id}`;
+
+  const check = document.createElement("button");
+  check.className = "goal-check";
+  check.style.borderColor = cat.color;
+  check.style.background = g.done ? cat.color : "transparent";
+  check.innerHTML = g.done ? `<span style="color:#000;font-size:11px">✓</span>` : "";
+  check.onclick = () => toggleGoal(cat.id, g.id);
+
+  const text = document.createElement("span");
+  text.className = "goal-text" + (g.done ? " done" : "");
+  text.textContent = g.text;
+
+  const del = document.createElement("button");
+  del.className = "goal-del";
+  del.innerHTML = "✕";
+  del.onclick = () => deleteGoal(cat.id, g.id);
+
+  row.append(check, text, del);
+  return row;
+}
+
+function addGoal(catId) {
+  const inp = document.getElementById(`inp-${catId}`);
+  const text = (inp.value || "").trim();
+  if (!text) return;
+  const day = todayGoals();
+  if (!day[catId]) day[catId] = [];
+  day[catId].push({ id: Date.now(), text, done: false });
+  save();
+  inp.value = "";
+  renderTracker();
+  inp.focus();
+}
+
+function toggleGoal(catId, goalId) {
+  const day = todayGoals();
+  const cat = day[catId] || [];
+  const g = cat.find(x=>x.id===goalId);
+  if (!g) return;
+  g.done = !g.done;
+  save();
+
+  if (g.done) {
+    const row = document.getElementById(`row-${goalId}`);
+    if (row) {
+      row.classList.add("celebrating");
+      setTimeout(() => row.classList.remove("celebrating"), 700);
+    }
+    // Check if all done
+    const allDone = CATS.every(c => {
+      const gs = getCatGoals(c.id);
+      return gs.length === 0 || gs.every(x=>x.done);
+    });
+    if (allDone) showToast("🏆 All goals done! You're unstoppable!");
+    else showToast("✓ Goal crushed!");
+  }
+
+  renderTracker();
+}
+
+function deleteGoal(catId, goalId) {
+  const day = todayGoals();
+  if (day[catId]) day[catId] = day[catId].filter(g=>g.id!==goalId);
+  save();
+  renderTracker();
+}
+
+// ────────────────────────────────────────────
+//  RENDER PLANNER
+// ────────────────────────────────────────────
+function renderPlanner() {
+  const el = document.getElementById("planner-content");
+  const fmtDate = new Date().toLocaleDateString("en-GB", {weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  let total = 0, done = 0;
+  CATS.forEach(c => { const gs=getCatGoals(c.id); total+=gs.length; done+=gs.filter(g=>g.done).length; });
+  const pct = total===0 ? 0 : Math.round(done/total*100);
+  const tip = TIPS[new Date().getDay() % TIPS.length];
+
+  let sectionsHTML = CATS.map(cat => {
+    const gs = getCatGoals(cat.id);
+    let rows = gs.map(g => `
+      <div class="planner-goal-row">
+        <div class="planner-box ${g.done?'checked'}">${g.done?"✓":""}</div>
+        <span class="planner-goal-txt ${g.done?'done':''}">${escHtml(g.text)}</span>
+      </div>`).join("");
+    // 2 blank lines for writing extra
+    rows += `
+      <div class="planner-goal-row"><div class="planner-box"></div><div class="planner-blank"></div></div>
+      <div class="planner-goal-row"><div class="planner-box"></div><div class="planner-blank"></div></div>`;
+    return `
+      <div class="planner-section">
+        <div class="planner-cat">${cat.emoji} ${cat.label}</div>
+        ${rows}
+      </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="planner-title">DAILY PLANNER</div>
+    <div class="planner-date">${fmtDate}</div>
+    <hr class="planner-divider" />
+    <div class="planner-prog-label">OVERALL PROGRESS</div>
+    <div class="planner-bar-bg"><div class="planner-bar-fill" style="width:${pct}%"></div></div>
+    <div class="planner-prog-txt">${done} of ${total} goals completed (${pct}%)</div>
+    ${sectionsHTML}
+    <div class="planner-tip"><b>${tip.emoji} ${tip.title}:</b> ${tip.body}</div>
+  `;
+}
+
+// ────────────────────────────────────────────
+//  RENDER TIPS
+// ────────────────────────────────────────────
+function renderTips() {
+  const el = document.getElementById("tips-list");
+  el.innerHTML = TIPS.map((t,i) => `
+    <div class="tip-card">
+      <div class="tip-num">0${i+1}</div>
+      <div class="tip-emoji">${t.emoji}</div>
+      <div>
+        <div class="tip-title">${t.title}</div>
+        <div class="tip-body">${t.body}</div>
+      </div>
+    </div>`).join("");
+}
+
+// ────────────────────────────────────────────
+//  TABS
+// ────────────────────────────────────────────
+let currentTab = "tracker";
+function switchTab(tab) {
+  ["tracker","planner","tips"].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t===tab ? "block" : "none";
+    const btn = document.getElementById(`tab-btn-${t}`);
+    btn.className = "tab-btn" + (t===tab?" active":"");
+  });
+  currentTab = tab;
+  if (tab==="planner") renderPlanner();
+}
+
+// ────────────────────────────────────────────
+//  TOAST
+// ────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+// ────────────────────────────────────────────
+//  UTILS
+// ────────────────────────────────────────────
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// ────────────────────────────────────────────
+//  DATE HEADER
+// ────────────────────────────────────────────
+function setDateHeader() {
+  document.getElementById("h-date").textContent =
+    new Date().toLocaleDateString("en-GB", {weekday:"long",day:"numeric",month:"long"});
+}
+
+// ────────────────────────────────────────────
+//  OFFLINE DETECTION
+// ────────────────────────────────────────────
+function updateOnlineStatus() {
+  document.getElementById("offline-badge").style.display = navigator.onLine ? "none" : "block";
+}
+window.addEventListener("online",  updateOnlineStatus);
+window.addEventListener("offline", updateOnlineStatus);
+
+// ────────────────────────────────────────────
+//  SERVICE WORKER
+// ────────────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+
+// ────────────────────────────────────────────
+//  BOOT
+// ────────────────────────────────────────────
+load();
+setDateHeader();
+updateOnlineStatus();
+renderTips();
+renderTracker();
+</script>
+</body>
+</html>
