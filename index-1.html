@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0a0a0a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="description" content="Victor's Daily Goal Tracker" />
+<title>Goal HQ</title>
+<style>
+  :root {
+    --gold: #FFB800;
+    --gold-dim: rgba(255,184,0,0.12);
+    --gold-border: rgba(255,184,0,0.25);
+    --bg: #0a0a0a;
+    --bg2: #111118;
+    --bg3: #17171f;
+    --border: rgba(255,255,255,0.08);
+    --text: #e0ddd5;
+    --muted: #5a5a6a;
+    --green: #00FF9D;
+    --red: #FF6B6B;
+    --radius: 12px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--text);
+    font-family: 'Courier New', Courier, monospace; font-size: 14px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app { display: flex; flex-direction: column; min-height: 100vh; max-width: 480px; margin: 0 auto; }
+
+  /* HEADER */
+  #header {
+    padding: 22px 18px 16px;
+    background: linear-gradient(170deg, #14141e 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 20;
+  }
+  .h-eyebrow { font-size: 9px; letter-spacing: 3px; color: var(--muted); margin-bottom: 4px; }
+  .h-title { font-size: 34px; font-weight: 900; letter-spacing: -1px; line-height: 1; color: #fff; }
+  .h-title span { color: var(--gold); }
+  .h-date { font-size: 10px; color: var(--muted); margin-top: 5px; }
+  .ring-wrap { position: relative; width: 78px; height: 78px; flex-shrink: 0; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring-pct { font-size: 20px; font-weight: 900; color: var(--gold); line-height: 1; }
+  .ring-sub { font-size: 8px; color: var(--muted); letter-spacing: 1.5px; margin-top: 1px; }
+
+  /* TABS */
+  #tabs { display: flex; background: var(--bg); border-bottom: 1px solid var(--border); position: sticky; top: 100px; z-index: 19; }
+  .tab-btn {
+    flex: 1; height: 54px; background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); font-family: 'Courier New', monospace; font-size: 11px;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    transition: color .2s, border-color .2s;
+  }
+  .tab-icon { font-size: 17px; }
+  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* CONTENT */
+  #content { flex: 1; overflow-y: auto; padding: 14px 13px 80px; }
+
+  /* EMPTY */
+  .empty-msg { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 20px; line-height: 1.8; }
+  .empty-msg .big { font-size: 30px; display: block; margin-bottom: 10px; }
+
+  /* STREAK */
+  .streak-bar {
+    background: var(--gold-dim); border: 1px solid var(--gold-border);
+    border-radius: var(--radius); padding: 11px 14px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .streak-count { font-size: 26px; font-weight: 900; color: var(--gold); margin-left: auto; }
+
+  /* CARDS */
+  .cat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; }
+  .cat-head { padding: 11px 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .cat-left { display: flex; align-items: center; gap: 8px; }
+  .cat-emoji { font-size: 19px; }
+  .cat-name { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; }
+  .cat-badge { font-size: 10px; padding: 2px 9px; border-radius: 20px; font-weight: 600; }
+  .goal-list { padding: 0 13px; }
+  .goal-row { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .goal-row:last-child { border-bottom: none; }
+  .g-check {
+    width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid;
+    flex-shrink: 0; background: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 11px;
+    transition: background .15s; -webkit-appearance: none;
+  }
+  .g-text { flex: 1; font-size: 13px; color: var(--text); line-height: 1.4; word-break: break-word; }
+  .g-text.done { color: var(--muted); text-decoration: line-through; }
+  .g-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 4px 6px; border-radius: 4px; }
+  .add-row { display: flex; gap: 8px; padding: 10px 13px 12px; border-top: 1px solid var(--border); }
+  .add-inp {
+    flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 10px; color: var(--text); font-family: 'Courier New', monospace; font-size: 12px; outline: none;
+  }
+  .add-inp:focus { border-color: var(--gold-border); }
+  .add-inp::placeholder { color: var(--muted); }
+  .add-btn {
+    width: 38px; height: 38px; border-radius: 8px; border: none;
+    font-size: 22px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; color: #000;
+  }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 76px; left: 50%; transform: translateX(-50%) translateY(16px);
+    background: var(--gold); color: #000; font-family: 'Courier New', monospace;
+    font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 30px;
+    opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; z-index: 99;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* PLANNER */
+  .print-note { background: var(--gold-dim); border: 1px solid var(--gold-border); border-radius: 8px; padding: 10px 13px; font-size: 11px; color: var(--gold); margin-bottom: 14px; line-height: 1.6; }
+  .plan-card { background: #fff; color: #111; border-radius: var(--radius); padding: 22px 18px; font-family: Georgia, serif; }
+  .plan-title { font-size: 20px; font-weight: 900; text-align: center; letter-spacing: 2px; }
+  .plan-date { font-size: 11px; color: #777; text-align: center; margin: 3px 0 12px; }
+  .plan-hr { border: none; border-top: 2px solid #111; margin: 8px 0 14px; }
+  .plan-prog-lbl { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #444; margin-bottom: 5px; }
+  .plan-bar { height: 7px; background: #eee; border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
+  .plan-bar-fill { height: 100%; background: #222; border-radius: 4px; }
+  .plan-prog-txt { font-size: 11px; color: #666; margin-bottom: 14px; }
+  .plan-sec { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #ddd; }
+  .plan-cat { font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+  .plan-row { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+  .plan-box { width: 15px; height: 15px; border: 1.5px solid #333; border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+  .plan-box.chk { background: #111; color: #fff; }
+  .plan-line { flex: 1; border-bottom: 1px dashed #ccc; min-height: 18px; }
+  .plan-tip { background: #f5f5f5; border-radius: 6px; padding: 10px 12px; font-size: 11px; color: #555; line-height: 1.6; margin-top: 6px; }
+
+  /* TIPS */
+  .tips-head { font-size: 28px; font-weight: 900; color: #fff; margin-bottom: 2px; }
+  .tips-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .tip-card { display: flex; gap: 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px; margin-bottom: 10px; }
+  .tip-num { font-size: 9px; color: #333; width: 16px; flex-shrink: 0; margin-top: 2px; }
+  .tip-emoji { font-size: 20px; flex-shrink: 0; }
+  .tip-title { font-size: 12px; font-weight: 600; color: var(--gold); margin-bottom: 3px; }
+  .tip-body { font-size: 11px; color: var(--muted); line-height: 1.65; }
+  .sys-box { background: var(--bg2); border: 1px solid var(--gold-border); border-radius: var(--radius); padding: 15px; margin-top: 4px; }
+  .sys-title { font-size: 12px; color: var(--gold); font-weight: 600; margin-bottom: 13px; }
+  .sys-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; font-size: 11px; color: #aaa; line-height: 1.55; }
+  .step-n { background: var(--gold); color: #000; border-radius: 50%; width: 19px; height: 19px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+
+  #content::-webkit-scrollbar { width: 3px; }
+  #content::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="header">
+    <div>
+      <div class="h-eyebrow">DAILY PLANNER</div>
+      <div class="h-title">GOAL <span>HQ</span></div>
+      <div class="h-date" id="h-date"></div>
+    </div>
+    <div class="ring-wrap">
+      <svg width="78" height="78" viewBox="0 0 78 78">
+        <circle cx="39" cy="39" r="32" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="7"/>
+        <circle id="ring-fill" cx="39" cy="39" r="32" fill="none" stroke="#FFB800" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="201.06" stroke-dashoffset="201.06"
+          style="transition:stroke-dashoffset .7s ease,stroke .4s"/>
+      </svg>
+      <div class="ring-label">
+        <div class="ring-pct" id="ring-pct">0%</div>
+        <div class="ring-sub">DONE</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tabs">
+    <button class="tab-btn active" id="tbtn-tracker" onclick="switchTab('tracker')"><span class="tab-icon">🎯</span>Tracker</button>
+    <button class="tab-btn" id="tbtn-planner" onclick="switchTab('planner')"><span class="tab-icon">📋</span>Planner</button>
+    <button class="tab-btn" id="tbtn-tips" onclick="switchTab('tips')"><span class="tab-icon">💡</span>Tips</button>
+  </div>
+
+  <div id="content">
+    <div id="tab-tracker"></div>
+    <div id="tab-planner" style="display:none"></div>
+    <div id="tab-tips" style="display:none"></div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+var CATS = [
+  {id:"study",   label:"Study / School",    emoji:"📚", color:"#00D4FF"},
+  {id:"health",  label:"Health & Fitness",  emoji:"💪", color:"#00FF9D"},
+  {id:"project", label:"Personal Projects", emoji:"⚡", color:"#FFB800"},
+  {id:"general", label:"General Tasks",     emoji:"✅", color:"#FF6B6B"}
+];
+
+var TIPS = [
+  {emoji:"🎯", title:"The 3-Goal Rule",       body:"Limit yourself to 3 priority goals per category per day. More splits your focus and nothing gets done properly."},
+  {emoji:"⏰", title:"Time-Block Everything",  body:"Don't just write 'study'. Write 'study MTS 101 — 8:00-10:00AM'. Specificity makes goals real."},
+  {emoji:"🐸", title:"Eat The Frog First",    body:"Start your day with the hardest goal. Everything else feels easy after that."},
+  {emoji:"🔁", title:"Review Every Night",    body:"Before bed, check what you finished. Move unfinished items to tomorrow — never delete them."},
+  {emoji:"🔋", title:"Energy Matching",       body:"Do deep work (studying, coding) when your energy is highest. Save errands for low-energy slots."},
+  {emoji:"📐", title:"Be Brutally Specific",  body:"'Exercise' is not a goal. '30 push-ups + 20-min run before 7AM' is. Specific = more likely to do it."}
+];
+
+var KEY = "goalhq_v4";
+var state = {goals:{}, streak:0, lastDate:""};
+
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+
+function load(){
+  try{ var r=localStorage.getItem(KEY); if(r) state=JSON.parse(r); }catch(e){}
+  var td=todayKey();
+  if(state.lastDate!==td){
+    var yd=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    var yg=state.goals[yd]||{};
+    var had=CATS.some(function(c){return (yg[c.id]||[]).length>0;});
+    var allDone=had&&CATS.every(function(c){var gs=yg[c.id]||[];return gs.length===0||gs.every(function(g){return g.done;});});
+    state.streak=allDone?(state.streak||0)+1:0;
+    state.lastDate=td;
+    save();
+  }
+}
+
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}
+}
+
+function dayGoals(){
+  var k=todayKey();
+  if(!state.goals[k]) state.goals[k]={};
+  return state.goals[k];
+}
+
+function getCat(id){ return (dayGoals()[id])||[]; }
+
+function updateRing(){
+  var total=0,done=0;
+  for(var i=0;i<CATS.length;i++){
+    var gs=getCat(CATS[i].id);
+    total+=gs.length;
+    for(var j=0;j<gs.length;j++) if(gs[j].done) done++;
+  }
+  var pct=total===0?0:Math.round(done/total*100);
+  var offset=201.06*(1-pct/100);
+  document.getElementById("ring-fill").style.strokeDashoffset=offset;
+  document.getElementById("ring-fill").style.stroke=pct===100?"#00FF9D":"#FFB800";
+  document.getElementById("ring-pct").textContent=pct+"%";
+  document.getElementById("ring-pct").style.color=pct===100?"#00FF9D":"#FFB800";
+}
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function hexToRgb(hex){
+  var r=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r?parseInt(r[1],16)+","+parseInt(r[2],16)+","+parseInt(r[3],16):"255,184,0";
+}
+
+function renderTracker(){
+  var el=document.getElementById("tab-tracker");
+  var html="";
+
+  if(state.streak>0){
+    html+='<div class="streak-bar"><span style="font-size:22px">🔥</span><span style="font-size:12px;color:var(--gold)">Current streak</span><span class="streak-count">'+state.streak+'d</span></div>';
+  }
+
+  var totalGoals=0;
+  for(var i=0;i<CATS.length;i++) totalGoals+=getCat(CATS[i].id).length;
+
+  if(totalGoals===0){
+    html+='<div class="empty-msg"><span class="big">🚀</span>No goals yet today.<br>Add your first goal below!</div>';
+  }
+
+  for(var ci=0;ci<CATS.length;ci++){
+    var cat=CATS[ci];
+    var gs=getCat(cat.id);
+    var doneCount=0;
+    for(var di=0;di<gs.length;di++) if(gs[di].done) doneCount++;
+    var rgb=hexToRgb(cat.color);
+    var colorDim="rgba("+rgb+",0.12)";
+    var colorBorder="rgba("+rgb+",0.22)";
+
+    html+='<div class="cat-card" style="border-color:'+colorBorder+'">';
+    html+='<div class="cat-head">';
+    html+='<div class="cat-left"><span class="cat-emoji">'+cat.emoji+'</span><span class="cat-name" style="color:'+cat.color+'">'+cat.label.toUpperCase()+'</span></div>';
+    html+='<span class="cat-badge" style="background:'+colorDim+';color:'+cat.color+'">'+doneCount+'/'+gs.length+'</span>';
+    html+='</div>';
+    html+='<div class="goal-list">';
+    for(var gi=0;gi<gs.length;gi++){
+      var g=gs[gi];
+      html+='<div class="goal-row">';
+      html+='<button class="g-check" style="border-color:'+cat.color+';background:'+(g.done?cat.color:"transparent")+'" onclick="toggle(\''+cat.id+'\','+g.id+')">'+(g.done?'<span style="color:#000">&#10003;</span>':"")+'</button>';
+      html+='<span class="g-text'+(g.done?" done":"")+'">'+esc(g.text)+'</span>';
+      html+='<button class="g-del" onclick="delGoal(\''+cat.id+'\','+g.id+')">&times;</button>';
+      html+='</div>';
+    }
+    html+='</div>';
+    html+='<div class="add-row">';
+    html+='<input class="add-inp" id="inp-'+cat.id+'" placeholder="Add goal..." onkeydown="if(event.key===\'Enter\')addGoal(\''+cat.id+'\')" />';
+    html+='<button class="add-btn" style="background:'+cat.color+'" onclick="addGoal(\''+cat.id+'\')">+</button>';
+    html+='</div>';
+    html+='</div>';
+  }
+
+  el.innerHTML=html;
+  updateRing();
+}
+
+function addGoal(catId){
+  var inp=document.getElementById("inp-"+catId);
+  if(!inp) return;
+  var text=inp.value.trim();
+  if(!text) return;
+  var day=dayGoals();
+  if(!day[catId]) day[catId]=[];
+  day[catId].push({id:Date.now(),text:text,done:false});
+  save();
+  renderTracker();
+  setTimeout(function(){ var i=document.getElementById("inp-"+catId); if(i) i.focus(); },60);
+}
+
+function toggle(catId,goalId){
+  var day=dayGoals();
+  var gs=day[catId]||[];
+  for(var i=0;i<gs.length;i++){
+    if(gs[i].id===goalId){
+      gs[i].done=!gs[i].done;
+      if(gs[i].done){
+        var total=0,done=0;
+        for(var ci=0;ci<CATS.length;ci++){var cgs=getCat(CATS[ci].id);total+=cgs.length;for(var j=0;j<cgs.length;j++)if(cgs[j].done)done++;}
+        if(total>0&&done===total) showToast("🏆 All goals done! You're unstoppable!");
+        else showToast("✓ Goal crushed!");
+      }
+      break;
+    }
+  }
+  save();
+  renderTracker();
+}
+
+function delGoal(catId,goalId){
+  var day=dayGoals();
+  if(day[catId]) day[catId]=day[catId].filter(function(g){return g.id!==goalId;});
+  save();
+  renderTracker();
+}
+
+function renderPlanner(){
+  var el=document.getElementById("tab-planner");
+  var fmtDate=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  var total=0,done=0;
+  for(var i=0;i<CATS.length;i++){var gs=getCat(CATS[i].id);total+=gs.length;for(var j=0;j<gs.length;j++)if(gs[j].done)done++;}
+  var pct=total===0?0:Math.round(done/total*100);
+  var tip=TIPS[new Date().getDay()%TIPS.length];
+  var secs="";
+  for(var ci=0;ci<CATS.length;ci++){
+    var cat=CATS[ci];
+    var cgs=getCat(cat.id);
+    var rows="";
+    for(var gi=0;gi<cgs.length;gi++){
+      var g=cgs[gi];
+      rows+='<div class="plan-row"><div class="plan-box'+(g.done?" chk":"")+'">'+(g.done?"&#10003;":"")+'</div><span style="font-size:12px;'+(g.done?"text-decoration:line-through;color:#999;":"")+'">'+esc(g.text)+'</span></div>';
+    }
+    rows+='<div class="plan-row"><div class="plan-box"></div><div class="plan-line"></div></div>';
+    rows+='<div class="plan-row"><div class="plan-box"></div><div class="plan-line"></div></div>';
+    secs+='<div class="plan-sec"><div class="plan-cat">'+cat.emoji+" "+cat.label+'</div>'+rows+'</div>';
+  }
+  el.innerHTML='<div class="print-note">📋 Tap the browser menu → Print to print this planner.</div>'+
+    '<div class="plan-card">'+
+    '<div class="plan-title">DAILY PLANNER</div>'+
+    '<div class="plan-date">'+fmtDate+'</div>'+
+    '<hr class="plan-hr"/>'+
+    '<div class="plan-prog-lbl">OVERALL PROGRESS</div>'+
+    '<div class="plan-bar"><div class="plan-bar-fill" style="width:'+pct+'%"></div></div>'+
+    '<div class="plan-prog-txt">'+done+' of '+total+' completed ('+pct+'%)</div>'+
+    secs+
+    '<div class="plan-tip"><b>'+tip.emoji+' '+tip.title+':</b> '+tip.body+'</div>'+
+    '</div>';
+}
+
+function renderTips(){
+  var el=document.getElementById("tab-tips");
+  var html='<div class="tips-head">TIPS &amp; SYSTEM</div><div class="tips-sub">6 rules that will sharpen your day.</div>';
+  for(var i=0;i<TIPS.length;i++){
+    var t=TIPS[i];
+    html+='<div class="tip-card"><div class="tip-num">0'+(i+1)+'</div><div class="tip-emoji">'+t.emoji+'</div><div><div class="tip-title">'+t.title+'</div><div class="tip-body">'+t.body+'</div></div></div>';
+  }
+  html+='<div class="sys-box"><div class="sys-title">⚙️ VICTOR\'S DAILY SYSTEM</div>'+
+    '<div class="sys-step"><span class="step-n">1</span><span><b>Morning (5 min)</b> — Open Goal HQ, set 2-3 goals per category.</span></div>'+
+    '<div class="sys-step"><span class="step-n">2</span><span><b>Midday check-in</b> — Mark what\'s done, adjust if needed.</span></div>'+
+    '<div class="sys-step"><span class="step-n">3</span><span><b>Night review (5 min)</b> — Check your ring, celebrate any win.</span></div>'+
+    '<div class="sys-step"><span class="step-n">4</span><span><b>Repeat.</b> Consistency beats perfection. Even 50% daily = growth.</span></div>'+
+    '</div>';
+  el.innerHTML=html;
+}
+
+var curTab="tracker";
+function switchTab(tab){
+  var tabs=["tracker","planner","tips"];
+  for(var i=0;i<tabs.length;i++){
+    document.getElementById("tab-"+tabs[i]).style.display=tabs[i]===tab?"block":"none";
+    document.getElementById("tbtn-"+tabs[i]).className="tab-btn"+(tabs[i]===tab?" active":"");
+  }
+  curTab=tab;
+  if(tab==="planner") renderPlanner();
+}
+
+var toastTimer;
+function showToast(msg){
+  var el=document.getElementById("toast");
+  el.textContent=msg;
+  el.className="show";
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){el.className="";},2200);
+}
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",function(){
+    navigator.serviceWorker.register("./sw.js").catch(function(){});
+  });
+}
+
+// BOOT
+load();
+document.getElementById("h-date").textContent=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+renderTips();
+renderTracker();
+</script>
+</body>
+</html>
